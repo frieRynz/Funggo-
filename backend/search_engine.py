@@ -1,124 +1,123 @@
-from elasticsearch import Elasticsearch
-from typing import List, Dict, Any
-from dotenv import load_dotenv
-import os
-import urllib3
+# from elasticsearch import Elasticsearch
+# from typing import List, Dict, Any
+# from dotenv import load_dotenv
+# import os
+# import urllib3
 
-# Use absolute import
-from utils import is_lyric_query
+# # Use absolute import
+# from utils import is_lyric_query
 
-# Suppress warnings
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-load_dotenv()
-# --- CONFIGURATION ---
-ES_HOST = "https://localhost:9200"
-ES_USER = os.getenv("es_user")
-ES_PASSWORD = os.getenv("es_password")
-INDEX_NAME = "songs" 
+# # Suppress warnings
+# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# load_dotenv()
+# # --- CONFIGURATION ---
+# ES_HOST = "https://localhost:9200"
+# ES_USER = os.getenv("es_user")
+# ES_PASSWORD = os.getenv("es_password")
+# INDEX_NAME = "songs" 
 
-# Connect
-es = Elasticsearch(
-    ES_HOST,
-    basic_auth=(ES_USER, ES_PASSWORD),
-    verify_certs=False
-)
+# # Connect
+# es = Elasticsearch(
+#     ES_HOST,
+#     basic_auth=(ES_USER, ES_PASSWORD),
+#     verify_certs=False
+# )
 
-def search_songs(query: str) -> List[Dict[str, Any]]:
-    """
-    Main search logic with THRESHOLDS:
-    - Detect lyric query
-    - Apply dynamic field boosting
-    - Apply 'minimum_should_match' to filter weak matches
-    - Apply 'min_score' to remove low-quality results
-    """
+# def search_songs(query: str) -> List[Dict[str, Any]]:
+#     """
+#     Main search logic with THRESHOLDS:
+#     - Detect lyric query
+#     - Apply dynamic field boosting
+#     - Apply 'minimum_should_match' to filter weak matches
+#     - Apply 'min_score' to remove low-quality results
+#     """
     
-    # 1. Determine Settings based on Query Type
-    if is_lyric_query(query):
-        # LYRIC MODE
-        boosts = {"title": 1.5, "artist": 1.5, "lyrics": 3.0}
+#     # 1. Determine Settings based on Query Type
+#     if is_lyric_query(query):
+#         # LYRIC MODE
+#         boosts = {"title": 1.5, "artist": 1.5, "lyrics": 3.0}
         
-        # User must get at least 65% of the words right.
-        # Prevents random songs appearing just because they share 1 common word like "love".
-        min_match = "65%" 
+#         # User must get at least 65% of the words right.
+#         # Prevents random songs appearing just because they share 1 common word like "love".
+#         min_match = "65%" 
         
-        # Lower cutoff for lyrics because natural language matches can sometimes have lower individual term scores
-        score_cutoff = 1.0 
-    else:
-        # TITLE/ARTIST MODE
-        boosts = {"title": 3.0, "artist": 2.0, "lyrics": 1.0}
+#         # Lower cutoff for lyrics because natural language matches can sometimes have lower individual term scores
+#         score_cutoff = 1.0 
+#     else:
+#         # TITLE/ARTIST MODE
+#         boosts = {"title": 3.0, "artist": 2.0, "lyrics": 0.5}
         
-        # "2<-1": If 1 or 2 words, match all. If >2 words, allow 1 missing word.
-        # Perfect for "Taylor Swift" (2 matches needed) vs "Taylor Sift" (typo allowed)
-        min_match = "2<-1" 
+#         # "2<-1": If 1 or 2 words, match all. If >2 words, allow 1 missing word.
+#         # Perfect for "Taylor Swift" (2 matches needed) vs "Taylor Sift" (typo allowed)
+#         min_match = "2<-1" 
         
-        # Higher cutoff: Title matches should be very strong
-        score_cutoff = 2.0
+#         # Higher cutoff: Title matches should be very strong
+#         score_cutoff = 2.0
 
-    # 2. Construct Query
-    body = {
-        "size": 20,
-        # GLOBAL THRESHOLD: If the final score is below this, drop the result.
-        "min_score": score_cutoff, 
+#     # 2. Construct Query
+#     body = {
+#         "size": 20,
+#         # GLOBAL THRESHOLD: If the final score is below this, drop the result.
+#         "min_score": score_cutoff, 
         
-        "sort":[
-            {"views": {"order": "desc", "missing": 0}},
-            "_score"
-        ],
-
+#         "sort":[
+#             {"views": {"order": "desc", "missing": 0}},
+#             "_score"
+#         ],
         
-        "query": {
-            "function_score": {
-                "query": {
-                    "multi_match": {
-                        "query": query,
-                        "fields": [
-                            f"title^{boosts['title']}",
-                            f"artist^{boosts['artist']}",
-                            f"lyrics^{boosts['lyrics']}",
-                            f"title.th^{boosts['title']}",
-                            f"artist.th^{boosts['artist']}",
-                            f"lyrics.th^{boosts['lyrics']}"
-                        ],
-                        "type": "most_fields", 
-                        "fuzziness": "AUTO",
+#         "query": {
+#             "function_score": {
+#                 "query": {
+#                     "multi_match": {
+#                         "query": query,
+#                         "fields": [
+#                             f"title^{boosts['title']}",
+#                             f"artist^{boosts['artist']}",
+#                             f"lyrics^{boosts['lyrics']}",
+#                             f"title.th^{boosts['title']}",
+#                             f"artist.th^{boosts['artist']}",
+#                             f"lyrics.th^{boosts['lyrics']}"
+#                         ],
+#                         "type": "most_fields", 
+#                         "fuzziness": "AUTO",
                         
-                        # FILTER: Only show results that match X% of the query terms
-                        "minimum_should_match": min_match
-                    }
-                },
-                "boost_mode": "sum",
-                "score_mode": "sum",
+#                         # FILTER: Only show results that match X% of the query terms
+#                         "minimum_should_match": min_match
+#                     }
+#                 },
+#                 "boost_mode": "sum",
+#                 "score_mode": "sum",
                 
-                "functions": [
-                    {
-                        "field_value_factor": {
-                            "field": "views",
-                            "factor": 50, 
-                            "modifier": "log1p",
-                            "missing": 0
-                        }
-                    }
-                ],
-            }
-        }
-    }
+#                 "functions": [
+#                     {
+#                         "field_value_factor": {
+#                             "field": "views",
+#                             "factor":5, 
+#                             "modifier": "log1p",
+#                             "missing": 0
+#                         }
+#                     }
+#                 ],
+#             }
+#         }
+#     }
 
-    # Execute Search
-    try:
-        result = es.search(index=INDEX_NAME, body=body)
+#     # Execute Search
+#     try:
+#         result = es.search(index=INDEX_NAME, body=body)
         
-        hits = []
-        for hit in result["hits"]["hits"]:
-            source = hit["_source"]
-            source["id"] = hit["_id"]
-            source["score"] = hit["_score"]
-            hits.append(source)
+#         hits = []
+#         for hit in result["hits"]["hits"]:
+#             source = hit["_source"]
+#             source["id"] = hit["_id"]
+#             source["score"] = hit["_score"]
+#             hits.append(source)
             
-        return hits
+#         return hits
         
-    except Exception as e:
-        print(f"Search Error: {e}")
-        return []
+#     except Exception as e:
+#         print(f"Search Error: {e}")
+#         return []
 
 
 # from elasticsearch import Elasticsearch
@@ -239,3 +238,115 @@ def search_songs(query: str) -> List[Dict[str, Any]]:
 #     except Exception as e:
 #         print(f"Search Error: {e}")
 #         return []
+
+from elasticsearch import Elasticsearch
+from typing import List, Dict, Any
+from dotenv import load_dotenv
+import os
+import urllib3
+
+# Use absolute import
+from utils import is_lyric_query
+
+# Suppress warnings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+load_dotenv()
+
+# --- CONFIGURATION ---
+ES_HOST = "https://localhost:9200"
+ES_USER = os.getenv("es_user")
+ES_PASSWORD = os.getenv("es_password")
+INDEX_NAME = "songs" 
+
+# Connect
+es = Elasticsearch(
+    ES_HOST,
+    basic_auth=(ES_USER, ES_PASSWORD),
+    verify_certs=False
+)
+
+def search_songs(query: str) -> List[Dict[str, Any]]:
+    """
+    Main search logic with HYBRID SCORING (Multiplier):
+    
+    Formula: Final Score = Text_Match_Score * (1 + log10(views + 1))
+    
+    Why this works:
+    - Irrelevant songs (Text Score ~1) * High Views (Multiplier 10) = 10 (Low Rank)
+    - Relevant Covers (Text Score ~20) * Low Views (Multiplier 2) = 40 (Mid Rank)
+    - Relevant Originals (Text Score ~20) * High Views (Multiplier 10) = 200 (Top Rank)
+    """
+    
+    # 1. Determine Settings based on Query Type
+    if is_lyric_query(query):
+        # LYRIC MODE
+        boosts = {"title": 1.5, "artist": 1.5, "lyrics": 3.0}
+        min_match = "65%" 
+        score_cutoff = 0.5 
+    else:
+        # TITLE/ARTIST MODE
+        boosts = {"title": 3.0, "artist": 2.0, "lyrics": 1.0}
+        min_match = "2<-1" 
+        score_cutoff = 1.0
+
+    # 2. Construct Query
+    body = {
+        "size": 20,
+        "min_score": score_cutoff,
+        
+        # REMOVED: "sort": [...] -> We removed the strict sort. 
+        # We now rely on the calculated score below.
+
+        "query": {
+            "function_score": {
+                "query": {
+                    "multi_match": {
+                        "query": query,
+                        "fields": [
+                            f"title^{boosts['title']}",
+                            f"artist^{boosts['artist']}",
+                            f"lyrics^{boosts['lyrics']}",
+                            f"title.th^{boosts['title']}",
+                            f"artist.th^{boosts['artist']}",
+                            f"lyrics.th^{boosts['lyrics']}"
+                        ],
+                        "type": "most_fields", 
+                        "fuzziness": "AUTO",
+                        "minimum_should_match": min_match
+                    }
+                },
+                
+                # --- CRITICAL CHANGE: Multiplier Logic ---
+                # We use a script to calculate a safe multiplier.
+                # If views = 0, multiplier = 1 (Score is unchanged).
+                # If views = 1M, multiplier ~= 7 (Score boosted 7x).
+                "script_score": {
+                    "script": {
+                        "source": "Math.log10(doc['views'].value + 1) + 1"
+                    }
+                },
+                
+                # Multiply the Text Score by the Script Result
+                "boost_mode": "multiply", 
+                "score_mode": "max",
+            }
+        }
+    }
+
+    # Execute Search
+    try:
+        result = es.search(index=INDEX_NAME, body=body)
+        
+        hits = []
+        for hit in result["hits"]["hits"]:
+            source = hit["_source"]
+            source["id"] = hit["_id"]
+            # Debugging info
+            source["score"] = hit["_score"]
+            hits.append(source)
+            
+        return hits
+        
+    except Exception as e:
+        print(f"Search Error: {e}")
+        return []
