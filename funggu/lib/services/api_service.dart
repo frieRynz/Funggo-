@@ -9,9 +9,13 @@ class ApiService{
   static const String baseUrl = "http://127.0.0.1:8000";
   // static const String baseUrl = "http://10.0.2.2:8000";
 
-  static Future<List<Song>> searchSongs(String query) async {
+  static Future<List<Song>> searchSongs(String query, {bool isArtistSearch = false}) async {
     try {
-      final url = Uri.parse("$baseUrl/search?q=$query");
+      final url = Uri.parse("$baseUrl/search?q=$query").replace(queryParameters: {
+        'q' : query,
+        'is_artist_search': isArtistSearch.toString(),
+      });
+      
       print("Fetching: $url"); // for debugging
 
       final res = await http.get(url);

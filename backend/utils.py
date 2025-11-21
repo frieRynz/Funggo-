@@ -28,7 +28,7 @@ def is_lyric_query(query: str) -> bool:
     # Titles (e.g., "Thriller", "Havana") rarely have many stopwords compared to lyrics.
     # If > 30% of the query is stopwords, it's likely natural language (lyrics).
     stopword_count = sum(1 for t in tokens if t in STOPWORDS)
-    if len(tokens) > 0 and (stopword_count / len(tokens)) > 0.3:
+    if len(tokens) > 0 and (stopword_count / len(tokens)) > 0.50:
         return True
 
     return False

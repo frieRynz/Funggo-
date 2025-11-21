@@ -22,8 +22,12 @@ def root():
     return {"message": "Song Search API with Elasticsearch is running!"}
 
 @app.get("/search", response_model=SearchResponse)
-def search_endpoint(q: str = Query(..., min_length=1, description="Search for songs by title, artist, or lyrics")):
-    results = search_songs(q)
+def search_endpoint(
+    q: str = Query(..., min_length=1, description="Search for songs by title, artist, or lyrics"),
+    is_artist_search: bool = Query(False, description="Boost artist field if true")
+):
+    # results = search_songs(q)
+    results = search_songs(q, is_artist_search)
     return SearchResponse(results=results)
 
 if __name__ == "__main__":

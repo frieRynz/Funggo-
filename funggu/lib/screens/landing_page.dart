@@ -19,6 +19,7 @@ class _FirstPageState extends State<LandingPage> {
   List<Song> _searchResults = [];
   bool _isLoading = false;
   bool _hasSearched = false;
+  bool _isArtistSearch = false;
 
   Future<void> _performSearch() async{
     if (_searchController.text.isEmpty) return;
@@ -30,18 +31,11 @@ class _FirstPageState extends State<LandingPage> {
       _hasSearched = true;
     });
 
-    // Simulate network delay
-    // Future.delayed(const Duration(milliseconds: 800), () {
-    //   if (mounted) {
-    //     setState(() {
-    //       _searchResults = MockDatabase.searchSongs(_searchController.text);
-    //       // _searchResults = await ApiService.searchSongs(_searchController.text);
-    //       _isLoading = false;
-    //     });
-    //   }
-    // });
     try{
-      final songs = await ApiService.searchSongs(_searchController.text);
+      final songs = await ApiService.searchSongs(
+        _searchController.text, 
+        isArtistSearch: _isArtistSearch);
+
       if(mounted){
         setState(() {
           _searchResults = songs;
@@ -106,9 +100,36 @@ class _FirstPageState extends State<LandingPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
+                  
+                  // For _isArtist checkbox
+                  Row(
+                    children: [
+                      SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: Checkbox(
+                          value: _isArtistSearch, 
+                          onChanged: (bool? value){
+                            setState(() {
+                              _isArtistSearch = value ?? false;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10,),
+                      Text('Searching for an Artist??',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: const Color.fromARGB(255, 247, 80, 29),
+                        ),)
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
                   // Search button
                   SizedBox(
-                    
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: _performSearch,
