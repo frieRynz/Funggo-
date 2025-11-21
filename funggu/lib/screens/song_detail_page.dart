@@ -81,7 +81,7 @@ class SongDetailPage extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    _buildInfoRow('Album', song.album),
+                    _buildInfoRow('View', song.views.toString()),
                     const Divider(height: 24),
                     _buildInfoRow('Duration', song.duration),
                   ],
@@ -149,4 +149,5 @@ class SongDetailPage extends StatelessWidget {
       ],
     );
   }
+
 }

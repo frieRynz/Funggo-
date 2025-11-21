@@ -4,6 +4,7 @@ class Song {
   final String album;
   final String duration;
   final String lyrics;
+  final int views;
   final String? imageUrl;
 
   Song({
@@ -12,6 +13,7 @@ class Song {
     required this.album,
     required this.duration,
     required this.lyrics,
+    required this.views,
     this.imageUrl,
   });
 
@@ -23,6 +25,7 @@ class Song {
       album: json['album'] ?? 'Unknown Album',
       duration: json['duration'] ?? 'N/A', 
       lyrics: json['lyrics'] ?? '',
+      views: json['views'] ?? 0,
       imageUrl: null, // Covers camelCase or snake_case
     );
   }
