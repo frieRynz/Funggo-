@@ -22,7 +22,7 @@ INDEX_NAME = "songs"
 # 1. Connect to Elasticsearch
 # -------------------------------
 try:
-    print(f"🔌 Connecting to {ES_HOST}...")
+    print(f" Connecting to {ES_HOST}...")
     es = Elasticsearch(
         ES_HOST,
         basic_auth=(ES_USER, ES_PASSWORD),
@@ -31,11 +31,11 @@ try:
     )
 
     if not es.ping():
-        raise exceptions.ConnectionError("❌ Cannot connect to Elasticsearch!")
-    print("✅ Connected successfully!")
+        raise exceptions.ConnectionError(" Cannot connect to Elasticsearch!")
+    print("Connected successfully!")
 
 except Exception as e:
-    print(f"❌ Connection failed: {e}")
+    print(f"Connection failed: {e}")
     sys.exit(1)
 
 # -------------------------------
@@ -88,19 +88,19 @@ mapping = {
 # 3. Create Index
 # -------------------------------
 if es.indices.exists(index=INDEX_NAME):
-    print(f"ℹ️ Index '{INDEX_NAME}' already exists. Skipping creation.")
+    print(f"Index '{INDEX_NAME}' already exists. Skipping creation.")
 else:
     es.indices.create(index=INDEX_NAME, body=mapping)
-    print(f"🆕 Index '{INDEX_NAME}' created.")
+    print(f"Index '{INDEX_NAME}' created.")
 
 # -------------------------------
 # 4. Upload Data
 # -------------------------------
 if not os.path.exists(DATASET_PATH):
-    print(f"⚠️ Dataset file '{DATASET_PATH}' not found. Skipping upload.")
+    print(f"Dataset file '{DATASET_PATH}' not found. Skipping upload.")
     sys.exit(0)
 
-print("📤 Uploading dataset...")
+print("Uploading dataset...")
 
 def generate_actions():
     with open(DATASET_PATH, "r", encoding="utf-8") as f:
@@ -135,6 +135,6 @@ try:
         request_timeout=60,
         stats_only=True
     )
-    print(f"🎉 Upload complete! {success} documents indexed.")
+    print(f"Upload complete {success} documents indexed.")
 except Exception as e:
-    print(f"❌ Bulk upload error: {e}")
+    print(f"Bulk upload error: {e}")

@@ -36,21 +36,20 @@ def search_songs(query: str, is_artist_search: bool = False) -> List[Dict[str, A
     - Relevant Originals (Text Score ~20) * High Views (Multiplier 10) = 200 (Top Rank)
     """
     
-    # 1. Determine Settings based on Query Type
+    # Determine Settings based on Query Type
     if is_artist_search:
-         boosts = {"title": 1.5, "artist": 3.0, "lyrics": 1.5}
+         boosts = {"title": 1.5, "artist": 5.0, "lyrics": 1.5}
          min_match = "2<-1"
          score_cutoff = 1.0
         
     elif is_lyric_query(query):
-        # LYRIC MODE (Natural Language)
         boosts = {"title": 1.5, "artist": 1.5, "lyrics": 3.0}
         min_match = "65%" 
         score_cutoff = 0.5 
         
     else:
-        # TITLE/ARTIST MODE
-        boosts = {"title": 3.0, "artist": 2.0, "lyrics": 1.0}
+        # default mode
+        boosts = {"title": 5.0, "artist": 2.0, "lyrics": 1.0}
         min_match = "2<-1" 
         score_cutoff = 1.0
 
